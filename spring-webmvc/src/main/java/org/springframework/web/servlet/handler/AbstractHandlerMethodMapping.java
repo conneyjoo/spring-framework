@@ -79,7 +79,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 */
 	private static final String SCOPED_TARGET_NAME_PREFIX = "scopedTarget.";
 
-	private static final HandlerMethod PREFLIGHT_AMBIGUOUS_MATCH =
+	protected static final HandlerMethod PREFLIGHT_AMBIGUOUS_MATCH =
 			new HandlerMethod(new EmptyHandler(), ClassUtils.getMethod(EmptyHandler.class, "handle"));
 
 	private static final CorsConfiguration ALLOW_CORS_CONFIG = new CorsConfiguration();
@@ -166,7 +166,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	/**
 	 * Return the internal mapping registry. Provided for testing purposes.
 	 */
-	MappingRegistry getMappingRegistry() {
+	protected MappingRegistry getMappingRegistry() {
 		return this.mappingRegistry;
 	}
 
@@ -436,7 +436,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	}
 
 	@SuppressWarnings("NullAway") // Dataflow analysis limitation
-	private void addMatchingMappings(Collection<T> mappings, List<Match> matches, HttpServletRequest request) {
+	public void addMatchingMappings(Collection<T> mappings, List<Match> matches, HttpServletRequest request) {
 		for (T mapping : mappings) {
 			T match = getMatchingMapping(mapping, request);
 			if (match != null) {
@@ -542,7 +542,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 *
 	 * <p>Package-private for testing purposes.
 	 */
-	class MappingRegistry {
+	protected class MappingRegistry {
 
 		private final Map<T, MappingRegistration<T>> registry = new HashMap<>();
 
@@ -716,7 +716,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	}
 
 
-	static class MappingRegistration<T> {
+	protected static class MappingRegistration<T> {
 
 		private final T mapping;
 
@@ -766,7 +766,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * A thin wrapper around a matched HandlerMethod and its mapping, for the purpose of
 	 * comparing the best match with a comparator in the context of the current request.
 	 */
-	private class Match {
+	protected class Match {
 
 		private final T mapping;
 
@@ -781,6 +781,10 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 			return this.registration.getHandlerMethod();
 		}
 
+		public T getMapping() {
+			return this.mapping;
+		}
+
 		public boolean hasCorsConfig() {
 			return this.registration.hasCorsConfig();
 		}
@@ -792,7 +796,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	}
 
 
-	private class MatchComparator implements Comparator<Match> {
+	protected class MatchComparator implements Comparator<Match> {
 
 		private final Comparator<T> comparator;
 

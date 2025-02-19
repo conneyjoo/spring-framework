@@ -115,7 +115,7 @@ class WebMvcConfigurationSupportTests {
 	@Test
 	void requestMappingHandlerMapping() throws Exception {
 		ApplicationContext context = initContext(WebConfig.class, ScopedController.class, ScopedProxyController.class);
-		RequestMappingHandlerMapping handlerMapping = context.getBean(RequestMappingHandlerMapping.class);
+		RequestMappingHandlerMapping handlerMapping = context.getBean("requestMappingHandlerMapping", RequestMappingHandlerMapping.class);
 		assertThat(handlerMapping.getOrder()).isEqualTo(0);
 
 		HandlerExecutionChain chain = handlerMapping.getHandler(new MockHttpServletRequest("GET", "/"));

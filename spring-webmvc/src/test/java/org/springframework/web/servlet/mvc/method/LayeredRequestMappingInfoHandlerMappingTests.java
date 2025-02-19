@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 the original author or authors.
+ * Copyright 2002-2025 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,6 @@ import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.http.server.RequestPath;
 import org.springframework.http.server.observation.ServerRequestObservationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.AntPathMatcher;
@@ -68,28 +67,27 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Named.named;
 
 /**
- * Test fixture with {@link RequestMappingInfoHandlerMapping}.
+ * Test fixture with {@link LayeredRequestMappingHandlerMapping}.
  *
- * @author Arjen Poutsma
- * @author Rossen Stoyanchev
+ * @author conney joo
  */
-class RequestMappingInfoHandlerMappingTests {
+public class LayeredRequestMappingInfoHandlerMappingTests {
 
 	@SuppressWarnings({"unused", "removal"})
 	static Stream<?> pathPatternsArguments() {
 		TestController controller = new TestController();
 
-		TestRequestMappingInfoHandlerMapping mapping1 = new TestRequestMappingInfoHandlerMapping();
+		TestLayeredRequestMappingHandlerMapping mapping1 = new TestLayeredRequestMappingHandlerMapping();
 
 		UrlPathHelper pathHelper = new UrlPathHelper();
 		pathHelper.setRemoveSemicolonContent(false);
 
-		TestRequestMappingInfoHandlerMapping mapping2 = new TestRequestMappingInfoHandlerMapping();
+		TestLayeredRequestMappingHandlerMapping mapping2 = new TestLayeredRequestMappingHandlerMapping();
 		mapping2.setUrlPathHelper(pathHelper);
 
 		return Stream.of(named("defaults", mapping1), named("setRemoveSemicolonContent(false)", mapping2))
 				.peek(named -> {
-					TestRequestMappingInfoHandlerMapping mapping = named.getPayload();
+					TestLayeredRequestMappingHandlerMapping mapping = named.getPayload();
 					mapping.setApplicationContext(new StaticWebApplicationContext());
 					mapping.registerHandler(controller);
 					mapping.afterPropertiesSet();
@@ -117,7 +115,7 @@ class RequestMappingInfoHandlerMappingTests {
 
 
 	@PathPatternsParameterizedTest
-	void getDirectPaths(TestRequestMappingInfoHandlerMapping mapping) {
+	void getDirectPaths(TestLayeredRequestMappingHandlerMapping mapping) {
 		String[] patterns = {"/foo/*", "/foo", "/bar/*", "/bar"};
 		RequestMappingInfo info = mapping.createInfo(patterns);
 		Set<String> actual = mapping.getDirectPaths(info);
@@ -126,7 +124,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerDirectMatch(TestRequestMappingInfoHandlerMapping mapping) throws Exception {
+	void getHandlerDirectMatch(TestLayeredRequestMappingHandlerMapping mapping) throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/foo");
 		HandlerMethod handlerMethod = getHandler(mapping, request);
 
@@ -134,14 +132,14 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerGlobMatch(TestRequestMappingInfoHandlerMapping mapping) throws Exception {
-		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/bar");
+	void getHandlerGlobMatch(TestLayeredRequestMappingHandlerMapping mapping) throws Exception {
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/bar/aaa");
 		HandlerMethod handlerMethod = getHandler(mapping, request);
 		assertThat(handlerMethod.getMethod()).isEqualTo(this.barMethod.getMethod());
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerEmptyPathMatch(TestRequestMappingInfoHandlerMapping mapping) throws Exception {
+	void getHandlerEmptyPathMatch(TestLayeredRequestMappingHandlerMapping mapping) throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "");
 		HandlerMethod handlerMethod = getHandler(mapping, request);
 
@@ -149,7 +147,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerBestMatch(TestRequestMappingInfoHandlerMapping mapping) throws Exception {
+	void getHandlerBestMatch(TestLayeredRequestMappingHandlerMapping mapping) throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/foo");
 		request.setParameter("p", "anything");
 		HandlerMethod handlerMethod = getHandler(mapping, request);
@@ -158,7 +156,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerRequestMethodNotAllowed(TestRequestMappingInfoHandlerMapping mapping) {
+	void getHandlerRequestMethodNotAllowed(TestLayeredRequestMappingHandlerMapping mapping) {
 		MockHttpServletRequest request = new MockHttpServletRequest("POST", "/bar");
 		assertThatExceptionOfType(HttpRequestMethodNotSupportedException.class)
 				.isThrownBy(() -> mapping.getHandler(request))
@@ -166,7 +164,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest // SPR-9603
-	void getHandlerRequestMethodMatchFalsePositive(TestRequestMappingInfoHandlerMapping mapping) {
+	void getHandlerRequestMethodMatchFalsePositive(TestLayeredRequestMappingHandlerMapping mapping) {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/users");
 		request.addHeader("Accept", "application/xml");
 		mapping.registerHandler(new UserController());
@@ -175,13 +173,13 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest // SPR-8462
-	void getHandlerMediaTypeNotSupported(TestRequestMappingInfoHandlerMapping mapping) {
+	void getHandlerMediaTypeNotSupported(TestLayeredRequestMappingHandlerMapping mapping) {
 		testHttpMediaTypeNotSupportedException(mapping, "/person/1");
 		testHttpMediaTypeNotSupportedException(mapping, "/person/1.json");
 	}
 
 	@PathPatternsParameterizedTest // gh-28062
-	void getHandlerMediaTypeNotSupportedWithParseError(TestRequestMappingInfoHandlerMapping mapping) {
+	void getHandlerMediaTypeNotSupportedWithParseError(TestLayeredRequestMappingHandlerMapping mapping) {
 		MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/person/1");
 		request.setContentType("This string");
 		assertThatExceptionOfType(HttpMediaTypeNotSupportedException.class)
@@ -190,7 +188,15 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerHttpOptions(TestRequestMappingInfoHandlerMapping mapping) throws Exception {
+	void getHandlerNotSupportedQuantifierMatch(TestLayeredRequestMappingHandlerMapping mapping) throws Exception {
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/hello");
+		HandlerExecutionChain chain = mapping.getHandler(request);
+
+		assertThat(chain).isNull();
+	}
+
+	@PathPatternsParameterizedTest
+	void getHandlerHttpOptions(TestLayeredRequestMappingHandlerMapping mapping) throws Exception {
 		testHttpOptions(mapping, "/foo", "GET,HEAD,OPTIONS", null);
 		testHttpOptions(mapping, "/person/1", "PUT,OPTIONS", null);
 		testHttpOptions(mapping, "/persons", "GET,HEAD,POST,PUT,PATCH,DELETE,OPTIONS", null);
@@ -199,7 +205,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerTestInvalidContentType(TestRequestMappingInfoHandlerMapping mapping) {
+	void getHandlerTestInvalidContentType(TestLayeredRequestMappingHandlerMapping mapping) {
 		MockHttpServletRequest request = new MockHttpServletRequest("PUT", "/person/1");
 		request.setContentType("bogus");
 		assertThatExceptionOfType(HttpMediaTypeNotSupportedException.class)
@@ -208,7 +214,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest // SPR-8462
-	void getHandlerMediaTypeNotAccepted(TestRequestMappingInfoHandlerMapping mapping) {
+	void getHandlerMediaTypeNotAccepted(TestLayeredRequestMappingHandlerMapping mapping) {
 		testHttpMediaTypeNotAcceptableException(mapping, "/persons");
 		if (mapping.getPatternParser() == null) {
 			testHttpMediaTypeNotAcceptableException(mapping, "/persons.json");
@@ -216,7 +222,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest // SPR-12854
-	void getHandlerUnsatisfiedServletRequestParameterException(TestRequestMappingInfoHandlerMapping mapping) {
+	void getHandlerUnsatisfiedServletRequestParameterException(TestLayeredRequestMappingHandlerMapping mapping) {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/params");
 		assertThatExceptionOfType(UnsatisfiedServletRequestParameterException.class)
 				.isThrownBy(() -> mapping.getHandler(request))
@@ -225,7 +231,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void getHandlerProducibleMediaTypesAttribute(TestRequestMappingInfoHandlerMapping mapping) throws Exception {
+	void getHandlerProducibleMediaTypesAttribute(TestLayeredRequestMappingHandlerMapping mapping) throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/content");
 		request.addHeader("Accept", "application/xml");
 		mapping.getHandler(request);
@@ -246,7 +252,7 @@ class RequestMappingInfoHandlerMappingTests {
 		HandlerInterceptor interceptor = new HandlerInterceptor() {};
 		MappedInterceptor mappedInterceptor = new MappedInterceptor(new String[] {path}, interceptor);
 
-		TestRequestMappingInfoHandlerMapping mapping = new TestRequestMappingInfoHandlerMapping();
+		TestLayeredRequestMappingHandlerMapping mapping = new TestLayeredRequestMappingHandlerMapping();
 		mapping.registerHandler(new TestController());
 		mapping.setInterceptors(mappedInterceptor);
 		mapping.setApplicationContext(new StaticWebApplicationContext());
@@ -261,7 +267,7 @@ class RequestMappingInfoHandlerMappingTests {
 
 	@SuppressWarnings({"unchecked", "removal"})
 	@PathPatternsParameterizedTest
-	void handleMatchUriTemplateVariables(TestRequestMappingInfoHandlerMapping mapping) {
+	void handleMatchUriTemplateVariables(TestLayeredRequestMappingHandlerMapping mapping) {
 		RequestMappingInfo.BuilderConfiguration config = new RequestMappingInfo.BuilderConfiguration();
 		config.setPathMatcher(new AntPathMatcher());
 
@@ -280,7 +286,7 @@ class RequestMappingInfoHandlerMappingTests {
 
 	@SuppressWarnings({"unchecked", "removal"})
 	@PathPatternsParameterizedTest // SPR-9098
-	void handleMatchUriTemplateVariablesDecode(TestRequestMappingInfoHandlerMapping mapping) {
+	void handleMatchUriTemplateVariablesDecode(TestLayeredRequestMappingHandlerMapping mapping) {
 		RequestMappingInfo.BuilderConfiguration config = new RequestMappingInfo.BuilderConfiguration();
 		config.setPathMatcher(new AntPathMatcher());
 
@@ -304,7 +310,7 @@ class RequestMappingInfoHandlerMappingTests {
 
 	@SuppressWarnings("removal")
 	@PathPatternsParameterizedTest
-	void handleMatchBestMatchingPatternAttribute(TestRequestMappingInfoHandlerMapping mapping) {
+	void handleMatchBestMatchingPatternAttribute(TestLayeredRequestMappingHandlerMapping mapping) {
 		RequestMappingInfo.BuilderConfiguration config = new RequestMappingInfo.BuilderConfiguration();
 		config.setPathMatcher(new AntPathMatcher());
 
@@ -317,7 +323,7 @@ class RequestMappingInfoHandlerMappingTests {
 
 	@SuppressWarnings("removal")
 	@PathPatternsParameterizedTest
-	void handleMatchBestMatchingPatternAttributeInObservationContext(TestRequestMappingInfoHandlerMapping mapping) {
+	void handleMatchBestMatchingPatternAttributeInObservationContext(TestLayeredRequestMappingHandlerMapping mapping) {
 		RequestMappingInfo.BuilderConfiguration config = new RequestMappingInfo.BuilderConfiguration();
 		config.setPathMatcher(new AntPathMatcher());
 
@@ -332,7 +338,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest // gh-22543
-	void handleMatchBestMatchingPatternAttributeNoPatternsDefined(TestRequestMappingInfoHandlerMapping mapping) {
+	void handleMatchBestMatchingPatternAttributeNoPatternsDefined(TestLayeredRequestMappingHandlerMapping mapping) {
 		String path = "";
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
 		mapping.handleMatch(RequestMappingInfo.paths().build(), path, request);
@@ -340,7 +346,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest
-	void handleMatchMatrixVariables(TestRequestMappingInfoHandlerMapping mapping) {
+	void handleMatchMatrixVariables(TestLayeredRequestMappingHandlerMapping mapping) {
 		MockHttpServletRequest request;
 		MultiValueMap<String, String> matrixVariables;
 		Map<String, String> uriVariables;
@@ -406,7 +412,7 @@ class RequestMappingInfoHandlerMappingTests {
 
 	@SuppressWarnings("removal")
 	@PathPatternsParameterizedTest // SPR-10140, SPR-16867
-	void handleMatchMatrixVariablesDecoding(TestRequestMappingInfoHandlerMapping mapping) {
+	void handleMatchMatrixVariablesDecoding(TestLayeredRequestMappingHandlerMapping mapping) {
 
 		if (mapping.getPatternParser() == null) {
 			UrlPathHelper urlPathHelper = new UrlPathHelper();
@@ -427,7 +433,7 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	@PathPatternsParameterizedTest // gh-29611
-	void handleNoMatchWithoutPartialMatches(TestRequestMappingInfoHandlerMapping mapping) throws ServletException {
+	void handleNoMatchWithoutPartialMatches(TestLayeredRequestMappingHandlerMapping mapping) throws ServletException {
 		String path = "/non-existent";
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
 
@@ -439,14 +445,14 @@ class RequestMappingInfoHandlerMappingTests {
 	}
 
 	private HandlerMethod getHandler(
-			TestRequestMappingInfoHandlerMapping mapping, MockHttpServletRequest request) throws Exception {
+			TestLayeredRequestMappingHandlerMapping mapping, MockHttpServletRequest request) throws Exception {
 
 		HandlerExecutionChain chain = mapping.getHandler(request);
 		assertThat(chain).isNotNull();
 		return (HandlerMethod) chain.getHandler();
 	}
 
-	private void testHttpMediaTypeNotSupportedException(TestRequestMappingInfoHandlerMapping mapping, String url) {
+	private void testHttpMediaTypeNotSupportedException(TestLayeredRequestMappingHandlerMapping mapping, String url) {
 		MockHttpServletRequest request = new MockHttpServletRequest("PUT", url);
 		request.setContentType("application/json");
 		assertThatExceptionOfType(HttpMediaTypeNotSupportedException.class)
@@ -454,9 +460,11 @@ class RequestMappingInfoHandlerMappingTests {
 				.satisfies(ex -> assertThat(ex.getSupportedMediaTypes()).containsExactly(MediaType.APPLICATION_XML));
 	}
 
-	private void testHttpOptions(TestRequestMappingInfoHandlerMapping mapping, String requestURI,
-			String allowHeader, @Nullable MediaType acceptPatch) throws Exception {
-
+	private void testHttpOptions(
+			TestLayeredRequestMappingHandlerMapping mapping,
+			String requestURI,
+			String allowHeader,
+			@Nullable MediaType acceptPatch) throws Exception {
 		MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", requestURI);
 		HandlerMethod handlerMethod = getHandler(mapping, request);
 
@@ -477,17 +485,19 @@ class RequestMappingInfoHandlerMappingTests {
 		}
 	}
 
-	private void testHttpMediaTypeNotAcceptableException(TestRequestMappingInfoHandlerMapping mapping, String url) {
+	private void testHttpMediaTypeNotAcceptableException(TestLayeredRequestMappingHandlerMapping mapping, String url) {
 		MockHttpServletRequest request = new MockHttpServletRequest("GET", url);
 		request.addHeader("Accept", "application/json");
 		assertThatExceptionOfType(HttpMediaTypeNotAcceptableException.class).isThrownBy(() ->
-				mapping.getHandler(request))
-			.satisfies(ex -> assertThat(ex.getSupportedMediaTypes()).containsExactly(MediaType.APPLICATION_XML));
+						mapping.getHandler(request))
+				.satisfies(ex -> assertThat(ex.getSupportedMediaTypes()).containsExactly(MediaType.APPLICATION_XML));
 	}
 
-	private void handleMatch(TestRequestMappingInfoHandlerMapping mapping,
-			MockHttpServletRequest request, String pattern, String lookupPath) {
-
+	private void handleMatch(
+			TestLayeredRequestMappingHandlerMapping mapping,
+			MockHttpServletRequest request,
+			String pattern,
+			String lookupPath) {
 		if (mapping.getPatternParser() != null) {
 			ServletRequestPathUtils.parseAndCache(request);
 		}
@@ -520,7 +530,7 @@ class RequestMappingInfoHandlerMappingTests {
 		public void fooParam() {
 		}
 
-		@RequestMapping(value = "/ba*", method = { RequestMethod.GET, RequestMethod.HEAD })
+		@RequestMapping(value = "/bar/**", method = { RequestMethod.GET, RequestMethod.HEAD })
 		public void bar() {
 		}
 
@@ -572,6 +582,10 @@ class RequestMappingInfoHandlerMappingTests {
 		@RequestMapping(value = "/qux", method = RequestMethod.PATCH, consumes = "foo/bar")
 		public void patchBaz(String value) {
 		}
+
+		@RequestMapping(value = "/hel?o", method = RequestMethod.GET)
+		public void quantifier() {
+		}
 	}
 
 
@@ -588,8 +602,7 @@ class RequestMappingInfoHandlerMappingTests {
 		}
 	}
 
-
-	public static class TestRequestMappingInfoHandlerMapping extends RequestMappingInfoHandlerMapping {
+	public static class TestLayeredRequestMappingHandlerMapping extends LayeredRequestMappingHandlerMapping {
 
 
 		void registerHandler(Object handler) {
@@ -636,14 +649,8 @@ class RequestMappingInfoHandlerMappingTests {
 		}
 
 		@Override
-		protected String initLookupPath(HttpServletRequest request) {
-			// At runtime this is done by the DispatcherServlet
-			if (getPatternParser() != null) {
-				RequestPath requestPath = ServletRequestPathUtils.parseAndCache(request);
-				return requestPath.pathWithinApplication().value();
-			}
-			return super.initLookupPath(request);
+		protected HandlerMethod handleNoMatch(String lookupPath, HttpServletRequest request) throws Exception {
+			return handleNoMatch(getMappingRegistry().getRegistrations().keySet(), lookupPath, request);
 		}
 	}
-
 }

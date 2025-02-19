@@ -97,6 +97,7 @@ import org.springframework.web.servlet.mvc.Controller;
 import org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter;
 import org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter;
 import org.springframework.web.servlet.mvc.annotation.ResponseStatusExceptionResolver;
+import org.springframework.web.servlet.mvc.method.LayeredRequestMappingHandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver;
 import org.springframework.web.servlet.mvc.method.annotation.JsonViewRequestBodyAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.JsonViewResponseBodyAdvice;
@@ -303,6 +304,30 @@ public class WebMvcConfigurationSupport implements ApplicationContextAware, Serv
 
 		RequestMappingHandlerMapping mapping = createRequestMappingHandlerMapping();
 		mapping.setOrder(0);
+		mapping.setContentNegotiationManager(contentNegotiationManager);
+
+		initHandlerMapping(mapping, conversionService, resourceUrlProvider);
+
+		PathMatchConfigurer pathConfig = getPathMatchConfigurer();
+		if (pathConfig.getPathPrefixes() != null) {
+			mapping.setPathPrefixes(pathConfig.getPathPrefixes());
+		}
+
+		return mapping;
+	}
+
+	/**
+	 * Return a {@link LayeredRequestMappingHandlerMapping} ordered at -1 for mapping
+	 * requests to annotated controllers.
+	 */
+	@Bean
+	@SuppressWarnings("deprecation")
+	public LayeredRequestMappingHandlerMapping layeredRequestMappingHandlerMapping(
+			@Qualifier("mvcContentNegotiationManager") ContentNegotiationManager contentNegotiationManager,
+			@Qualifier("mvcConversionService") FormattingConversionService conversionService,
+			@Qualifier("mvcResourceUrlProvider") ResourceUrlProvider resourceUrlProvider) {
+		LayeredRequestMappingHandlerMapping mapping = new LayeredRequestMappingHandlerMapping();
+		mapping.setOrder(-1);
 		mapping.setContentNegotiationManager(contentNegotiationManager);
 
 		initHandlerMapping(mapping, conversionService, resourceUrlProvider);
