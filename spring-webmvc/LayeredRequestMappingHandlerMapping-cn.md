@@ -410,11 +410,9 @@ Request URL: /test1/box/server/x/file/download/1/a/b/c/d
 | LayeredRequestMappingHandlerMapping | (min, avg, max) = (571164, 608704, 635916) | (min, avg, max) = (496474, 591531, 625612) |
 
 **基准测试代码：**
+[LayeredRequestMappingHandlerMappingBenchmark.java](https://github.com/conneyjoo/spring-framework/blob/main/spring-webmvc/src/jmh/java/org/springframework/web/servlet/mvc/method/LayeredRequestMappingHandlerMappingBenchmark.java)
+[RequestMappingHandlerMappingBenchmark.java](https://github.com/conneyjoo/spring-framework/blob/main/spring-webmvc/src/jmh/java/org/springframework/web/servlet/mvc/method/RequestMappingHandlerMappingBenchmark.java)
 
-```
-LayeredRequestMappingHandlerMappingBenchmark.java
-RequestMappingHandlerMappingBenchmark.java
-```
 
 ### 5. 集成方法
 
